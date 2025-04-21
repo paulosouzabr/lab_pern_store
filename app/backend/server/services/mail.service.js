@@ -46,7 +46,7 @@ const createTransporter = async () => {
 
 const url =
   process.env.NODE_ENV === "production"
-    ? "https://localhost:300"
+    ? "https://store-frontend-server:300"
     : "http://localhost:3000";
 
 const signupMail = async (to, name) => {
