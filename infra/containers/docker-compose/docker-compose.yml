@@ -1,20 +1,21 @@
 services:
   backend:
-    image: backend-server
+    image: store-backend-server
     container_name: store-backend-server
+    hostname: store-backend-server
     build:
-      context: ./backend/server
+      context: ./../../../app/backend/server
       dockerfile: Dockerfile
     # restart: always
     env_file:
-      - ./backend/server/.env
+      - ./../../../app/backend/server/.env
     environment:
       - POSTGRES_HOST=store-db-server
       - POSTGRES_DB=store
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=changeme
     volumes:
-      - ./backend/server:/usr/src/app
+      - ./../../../app/backend/server:/usr/src/app
       - /usr/src/app/node_modules
     ports:
       - 9000:9000
@@ -26,16 +27,17 @@ services:
   frontend:
     image: store-frontend-server
     container_name: store-frontend-server
+    hostname: store-frontend-server
     restart: unless-stopped
     env_file:
-      - ./frontend/client/.env
+      - ./../../../app/frontend/.env
     build:
-      context: ./frontend/
+      context: ./../../../app/frontend/
       dockerfile: Dockerfile
     ports:
-      - 3001:3000
+      - 3000:3000
     volumes:
-      - ./frontend/client:/usr/src/app
+      - ./../../../app/frontend/:/usr/src/app
       - /usr/src/app/node_modules
     depends_on:
       - backend
@@ -44,17 +46,18 @@ services:
 
   database:
     container_name: store-db-server
+    hostname: store-db-server
     image: postgres
     restart: always
     env_file:
-      - ./backend/server/.env
+      - ./../../../app/backend/server/.env
     environment:
       - POSTGRES_PASSWORD=adminuser
     ports:
-      - 7890:5432
+      - 5432:5432
     volumes:
-      - ./backend/server/db:/var/lib/postgresql/data
-      - ./backend/server/config/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db:/var/lib/postgresql/data
+      - ./../../../app/backend/server/config/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
     - store_network
 
