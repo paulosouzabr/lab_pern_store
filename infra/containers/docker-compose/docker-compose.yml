@@ -1,0 +1,66 @@
+services:
+  backend:
+    image: backend-server
+    container_name: store-backend-server
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    # restart: always
+    env_file:
+      - ./backend/server/.env
+    environment:
+      - POSTGRES_HOST=store-db-server
+      - POSTGRES_DB=store
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=changeme
+    volumes:
+      - ./backend/server:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - 9000:9000
+    networks:
+      - store_network
+    depends_on:
+      - database
+
+  frontend:
+    image: store-frontend-server
+    container_name: store-frontend-server
+    restart: unless-stopped
+    env_file:
+      - ./frontend/client/.env
+    build:
+      context: ./frontend/
+      dockerfile: Dockerfile
+    ports:
+      - 3001:3000
+    volumes:
+      - ./frontend/client:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - store_network
+
+  database:
+    container_name: store-db-server
+    image: postgres
+    restart: always
+    env_file:
+      - ./backend/server/.env
+    environment:
+      - POSTGRES_PASSWORD=adminuser
+    ports:
+      - 7890:5432
+    volumes:
+      - ./backend/server/db:/var/lib/postgresql/data
+      - ./backend/server/config/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+    - store_network
+
+networks:
+  store_network:
+    driver: bridge
+volumes:
+  db:
+    driver: local
