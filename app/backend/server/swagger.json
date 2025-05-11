@@ -16,7 +16,7 @@
       "url": "https://opensource.org/licenses/MIT"
     }
   },
-  "host": "localhost:9000",
+  "host": "store-backend-server:9000",
   "basePath": "/api",
   "tags": [
     {

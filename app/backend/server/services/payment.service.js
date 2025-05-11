@@ -7,7 +7,7 @@ class PaymentService {
     try {
       return await stripe.paymentIntents.create({
         amount,
-        currency: "ngn",
+        currency: "EUR",
         payment_method_types: ["card"],
         receipt_email: email,
       });

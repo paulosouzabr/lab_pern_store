@@ -5,7 +5,7 @@ module.exports = {
       description: "Production server", // name
     },
     {
-      url: "http://localhost:9000/api", // url
+      url: "http://store-backend-server:9000/api", // url
       description: "Local server", // name
     },
   ],
