@@ -14,7 +14,11 @@ class ProductService {
     const limit = 12;
     const offset = (page - 1) * limit;
     try {
-      return await getAllProductsDb({ limit, offset });
+      const products = await getAllProductsDb({ limit, offset });
+      return products.map((product) => ({
+        ...product,
+        price: product.price / 100, 
+      }));
     } catch (error) {
       throw new ErrorHandler(error.statusCode, error.message);
     }
@@ -34,6 +38,7 @@ class ProductService {
       if (!product) {
         throw new ErrorHandler(404, "product not found");
       }
+      product.price = product.price / 100;
       return product;
     } catch (error) {
       throw new ErrorHandler(error.statusCode, error.message);

@@ -16,7 +16,7 @@ const Layout = ({ children, title, loading }) => {
           name="robots"
           content="max-snippet:-1, max-image-preview:large, max-video-preview:-1"
         />
-        <link rel="canonical" href="https://localhost/" />
+        <link rel="canonical" href="https://store-frontend-server/" />
         <meta property="og:locale" content="en_US" />
         <meta property="og:type" content="website" />
         <meta property="og:title" content="Store" />
@@ -24,7 +24,7 @@ const Layout = ({ children, title, loading }) => {
           property="og:description"
           content="E-commerce store built with React, Node, Express and Postgres"
         />
-        <meta property="og:url" content="https://localhost/" />
+        <meta property="og:url" content="https://store-frontend-server/" />
         <meta property="og:site_name" content="Store" />
         <meta property="og:image" content="android-chrome-512x512.png" />
         <meta property="og:image:secure_url" content="android-chrome-512x512.png" />
