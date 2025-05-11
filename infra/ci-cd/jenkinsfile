@@ -1,99 +1,103 @@
 pipeline {
-    agent any
-
+    agent {
+        kubernetes {
+            yaml '''
+                apiVersion: v1
+                kind: Pod
+                spec:
+                  containers:
+                  - name: docker
+                    image: docker:20.10.16-dind
+                    securityContext:
+                      privileged: true
+                  - name: helm
+                    image: alpine/helm:3.9.0
+                    command:
+                    - cat
+                    tty: true
+                  - name: kubectl
+                    image: bitnami/kubectl:1.24
+                    command:
+                    - cat
+                    tty: true
+                  - name: sonar-scanner
+                    image: sonarsource/sonar-scanner-cli:latest
+                    command:
+                    - cat
+                    tty: true
+            '''
+        }
+    }
+    
     environment {
-        GIT_REPO = 'https://github.com/Boora-Raman/PERN-Store.git'
-        GIT_BRANCH = 'main'
-        SONARQUBE_SERVER = 'SonarQube'
-        NEXUS_PROTOCOL = "https"
-        NEXUS_URL = "35.172.231.232:8082"
-        NEXUS_REPOSITORY = "docker"
-        NEXUS_CREDENTIAL_ID = "NexusCreds"
-        IMAGE_NAME = "pern-app"
-        IMAGE_TAG = "latest"
-        PATH = "/usr/bin:/usr/local/bin:$PATH"
+        DOCKER_REGISTRY = 'your-registry'
+        DOCKER_CREDS = credentials('docker-credentials')
+        GITHUB_CREDS = credentials('github-credentials')
+        SONAR_TOKEN = credentials('sonar-token')
     }
 
     stages {
-        stage('Clone Repository') {
+        stage('Checkout') {
             steps {
-                script {
-                    deleteDir()
-                    echo "Cloning Git Repository..."
-                    checkout([$class: 'GitSCM', branches: [[name: "*/${GIT_BRANCH}"]],
-                              userRemoteConfigs: [[url: "${GIT_REPO}"]]])
+                git branch: 'main',
+                    url: 'https://github.com/paulosouzabr/pern-store.git',
+                    credentialsId: 'github-credentials'
+            }
+        }
+
+        stage('Build Backend') {
+            steps {
+                container('docker') {
+                    dir('app/backend/server') {
+                        sh '''
+                        docker build -t ${DOCKER_REGISTRY}/pern-store-backend:${BUILD_NUMBER} .
+                        docker login -u ${DOCKER_CREDS_USR} -p ${DOCKER_CREDS_PSW}
+                        docker push ${DOCKER_REGISTRY}/pern-store-backend:${BUILD_NUMBER}
+                        '''
+                    }
                 }
             }
         }
 
-        stage('Verify Node.js Installation') {
+        stage('Build Frontend') {
             steps {
-                sh 'node -v'
-                sh 'npm -v'
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                script {
-                    echo "Installing dependencies..."
-                    sh 'npm install'
+                container('docker') {
+                    dir('app/frontend') {
+                        sh '''
+                        docker build -t ${DOCKER_REGISTRY}/pern-store-frontend:${BUILD_NUMBER} .
+                        docker push ${DOCKER_REGISTRY}/pern-store-frontend:${BUILD_NUMBER}
+                        '''
+                    }
                 }
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                script {
-                    echo "Running SonarQube Analysis..."
-                    def scannerHome = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                    withSonarQubeEnv(SONARQUBE_SERVER) {
-                        sh "${scannerHome}/bin/sonar-scanner"
-                    }
+                container('sonar-scanner') {
+                    sh '''
+                    sonar-scanner \
+                        -Dsonar.projectKey=pern-store \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=http://sonarqube-server:9000 \
+                        -Dsonar.login=${SONAR_TOKEN}
+                    '''
                 }
             }
         }
 
-        stage('Verify Docker') {
+        stage('Deploy to Kubernetes') {
             steps {
-                sh 'docker --version'
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    echo "Building Docker image..."
-                    sh """
-                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -f client/Dockerfile client
-                    """
+                container('helm') {
+                    sh '''
+                    helm upgrade --install pern-store ./infra/k8s/helm-charts/pern-store \
+                        --set backend.image.tag=${BUILD_NUMBER} \
+                        --set frontend.image.tag=${BUILD_NUMBER} \
+                        --namespace pern-store \
+                        --create-namespace
+                    '''
                 }
             }
-        }
-
-        stage('Push Docker Image to Nexus') {
-            steps {
-                script {
-                    echo "Pushing Docker Image to Nexus..."
-                    sh """
-                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${NEXUS_URL}/${IMAGE_NAME}:${IMAGE_TAG}
-                    docker push ${NEXUS_URL}/${IMAGE_NAME}:${IMAGE_TAG}
-                    """
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            echo 'Cleaning up...'
-            cleanWs()
-        }
-        success {
-            echo 'Build, test, and analysis succeeded!'
-        }
-        failure {
-            echo 'Build, test, or analysis failed.'
         }
     }
 }
